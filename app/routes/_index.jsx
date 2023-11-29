@@ -1,15 +1,23 @@
-import { useLoaderData } from "@remix-run/react"
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export async function loader() {
-  return await fetch(
-    `https://api.sl.se/api2/realtimedeparturesV4.json?key=${process.env.REALTIME_KEY}&siteid=9733&timewindow=60`
-  ).then((res) => res.json())
+  const tullinge = await fetch(
+    `https://api.sl.se/api2/realtimedeparturesV4.json?key=${process.env.REALTIME_KEY}&siteid=${process.env.TULLINGE_SITE_ID}&timewindow=60`
+  );
+  const sodra = await fetch(
+    `https://api.sl.se/api2/realtimedeparturesV4.json?key=${process.env.REALTIME_KEY}&siteid=${process.env.SODRA_SITE_ID}&timewindow=60`
+  );
+
+  return json({
+    tullinge: await tullinge.json(),
+    sodra: await sodra.json()
+  })
 }
 
 export const meta = () => {
   return [
-    { title: "Trafic in Vega" },
-    { name: "description", content: "Vega" },
+    { title: "Traffic from/to Tullinge" },
   ];
 };
 
@@ -45,32 +53,41 @@ function departureItems(item) {
 }
 
 export default function Index() {
-  const { ResponseData } = useLoaderData()
+  const { tullinge, sodra } = useLoaderData()
 
-  const trains = ResponseData.Trains
-  const buses = ResponseData.Buses
-  const cityBound = trains.filter((train) => train.JourneyDirection === 2)
-  const nonCityBound = trains.filter((train) => train.JourneyDirection === 1)
-
+  const allData = [
+    {
+      title: 'Tullinge Station',
+      trains: tullinge.ResponseData.Trains.filter((train) => train.JourneyDirection === 2),
+      buses: tullinge.ResponseData.Buses.filter(bus => ["722", "723"].includes(bus.LineNumber))
+    },
+    {
+      title: 'Södra Station',
+      trains: sodra.ResponseData.Trains.filter((train) => train.JourneyDirection === 1 && ["40", "41"].includes(train.LineNumber)),
+    },
+  ]
   return (
-    <div className="flex flex-col items-center justify-center gap-6 lg:mx-16">
-      <h1 className="py-7 font-serif text-5xl font-bold">Vega station</h1>
+    <main className="flex flex-col gap-8 p-4">
+      {allData.map(item => (
+        <section key={item.title} className="flex flex-col items-center gap-4">
+          <h1 className="font-serif text-4xl font-bold">{item.title}</h1>
 
-      <div className="w-full max-w-[700px] bg-sky-500 p-3">
-          <h2 className="text-2xl font-bold">Mot stan</h2>
-          <ul>{cityBound.map((train) => departureItems(train))}</ul>
-      </div>
+          <div className="flex flex-col gap-4 w-full items-center">
+            <div className="w-full max-w-[700px] bg-sky-500 p-3">
+              <h2 className="text-2xl font-bold pb-2">Tåg</h2>
+              <ul>{item.trains.map((train) => departureItems(train))}</ul>
+            </div>
 
-      <div className="w-full max-w-[700px] bg-red-500 p-3">
-        <h2 className="text-2xl font-bold">Buss 837</h2>
-        <ul>{buses.filter((bus) => bus.LineNumber === "837").map((bus) => departureItems(bus))}</ul>
-      </div>
-
-      <div className="w-full max-w-[700px] bg-sky-500 p-3">
-          <h2 className="text-2xl font-bold">Söderut</h2>
-          <ul>{nonCityBound.map((train) => departureItems(train))}</ul>
-      </div>
-
-    </div>
+            {item.buses && (
+              <div className="w-full max-w-[700px] bg-red-500 p-3">
+                <h2 className="text-2xl font-bold pb-2">Buss 722/723</h2>
+                <ul>{item.buses.map((bus) => departureItems(bus))}</ul>
+              </div>
+            )}
+          </div>
+        </section>
+      )
+      )}
+    </main>
   )
 }
