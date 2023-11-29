@@ -85,7 +85,7 @@ export default function Index() {
   ]
 
   return (
-    <main className="flex flex-col gap-8 p-4">
+    <main className="flex flex-col gap-8 p-4 bg-slate-200">
       {revalidator.state === 'loading' && <Loader className="fixed bottom-5 right-5 p-2 w-10 h-10 rounded-full text-black bg-white" />}
       {allData.map(item => (
         <section key={item.title} className="flex flex-col items-center gap-4">
