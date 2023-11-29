@@ -8,10 +8,14 @@ export async function loader() {
   const sodra = await fetch(
     `https://api.sl.se/api2/realtimedeparturesV4.json?key=${process.env.REALTIME_KEY}&siteid=${process.env.SODRA_SITE_ID}&timewindow=60`
   );
+  const home = await fetch(
+    `https://api.sl.se/api2/realtimedeparturesV4.json?key=${process.env.REALTIME_KEY}&siteid=${process.env.HOME_SITE_ID}&timewindow=60`
+  );
 
   return json({
     tullinge: await tullinge.json(),
-    sodra: await sodra.json()
+    sodra: await sodra.json(),
+    home: await home.json(),
   })
 }
 
@@ -26,7 +30,7 @@ function deviationsStatus(deviations, journeyNumber) {
     return deviations.map((deviation) => (
       <span
         key={journeyNumber + deviation.ImportanceLevel}
-        className="bg-white p-1 font-bold text-red-600 my-2"
+        className="bg-white px-3 py-1 rounded-md font-bold text-red-600 ml-2"
       >
         {deviation.Text}
       </span>
@@ -43,17 +47,16 @@ function departureItems(item) {
     >
       <span className="flex justify-between">
         <span>
-          {item.LineNumber} {item.Destination}
+          {item.LineNumber} {item.Destination}  {deviationsStatus(item.Deviations, item.JourneyNumber)}
         </span>
         {item.DisplayTime}
       </span>
-      {deviationsStatus(item.Deviations, item.JourneyNumber)}
     </li>
   )
 }
 
 export default function Index() {
-  const { tullinge, sodra } = useLoaderData()
+  const { tullinge, sodra, home } = useLoaderData()
 
   const allData = [
     {
@@ -65,6 +68,10 @@ export default function Index() {
       title: 'Södra Station',
       trains: sodra.ResponseData.Trains.filter((train) => train.JourneyDirection === 1 && ["40", "41"].includes(train.LineNumber)),
     },
+    {
+      title: 'Almvägen',
+      buses: home.ResponseData.Buses,
+    },
   ]
   return (
     <main className="flex flex-col gap-8 p-4">
@@ -73,14 +80,16 @@ export default function Index() {
           <h1 className="font-serif text-4xl font-bold">{item.title}</h1>
 
           <div className="flex flex-col gap-4 w-full items-center">
-            <div className="w-full max-w-[700px] bg-sky-500 p-3">
-              <h2 className="text-2xl font-bold pb-2">Tåg</h2>
-              <ul>{item.trains.map((train) => departureItems(train))}</ul>
-            </div>
+            {item.trains && (
+              <div className="w-full max-w-[700px] bg-sky-500 p-3">
+                <h2 className="text-2xl font-bold pb-2">Tåg</h2>
+                <ul>{item.trains.map((train) => departureItems(train))}</ul>
+              </div>
+            )}
 
             {item.buses && (
               <div className="w-full max-w-[700px] bg-red-500 p-3">
-                <h2 className="text-2xl font-bold pb-2">Buss 722/723</h2>
+                <h2 className="text-2xl font-bold pb-2">Buss</h2>
                 <ul>{item.buses.map((bus) => departureItems(bus))}</ul>
               </div>
             )}
