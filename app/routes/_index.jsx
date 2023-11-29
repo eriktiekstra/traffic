@@ -1,5 +1,7 @@
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, useRevalidator } from "@remix-run/react";
+import { useInterval } from "usehooks-ts";
+import { Loader } from '../components/Loader';
 
 export async function loader() {
   const tullinge = await fetch(
@@ -30,7 +32,7 @@ function deviationsStatus(deviations, journeyNumber) {
     return deviations.map((deviation) => (
       <span
         key={journeyNumber + deviation.ImportanceLevel}
-        className="bg-white px-3 py-1 rounded-md font-bold text-red-600 ml-2"
+        className="bg-white px-3 py-1 rounded-md font-semibold text-red-600 ml-2 mb-1 text-sm"
       >
         {deviation.Text}
       </span>
@@ -45,36 +47,46 @@ function departureItems(item) {
       className=" flex flex-col px-2 py-1 text-lg text-white odd:bg-black/25"
       key={item.JourneyNumber}
     >
-      <span className="flex justify-between">
+      <span className="flex justify-between text">
         <span>
-          {item.LineNumber} {item.Destination}  {deviationsStatus(item.Deviations, item.JourneyNumber)}
+          {item.LineNumber} {item.Destination}
         </span>
         {item.DisplayTime}
       </span>
+      {deviationsStatus(item.Deviations, item.JourneyNumber)}
     </li>
   )
 }
 
 export default function Index() {
   const { tullinge, sodra, home } = useLoaderData()
+  const revalidator = useRevalidator();
+
+  useInterval(() => {
+    if (revalidator.state === "idle") {
+      revalidator.revalidate();
+    }
+  }, 1000 * 10)
 
   const allData = [
     {
       title: 'Tullinge Station',
-      trains: tullinge.ResponseData.Trains.filter((train) => train.JourneyDirection === 2),
-      buses: tullinge.ResponseData.Buses.filter(bus => ["722", "723"].includes(bus.LineNumber))
+      trains: tullinge.ResponseData?.Trains.filter((train) => train.JourneyDirection === 2),
+      buses: tullinge.ResponseData?.Buses.filter(bus => ["722", "723"].includes(bus.LineNumber))
     },
     {
       title: 'Södra Station',
-      trains: sodra.ResponseData.Trains.filter((train) => train.JourneyDirection === 1 && ["40", "41"].includes(train.LineNumber)),
+      trains: sodra.ResponseData?.Trains.filter((train) => train.JourneyDirection === 1 && ["40", "41"].includes(train.LineNumber)),
     },
     {
       title: 'Almvägen',
-      buses: home.ResponseData.Buses,
+      buses: home.ResponseData?.Buses,
     },
   ]
+
   return (
     <main className="flex flex-col gap-8 p-4">
+      {revalidator.state === 'loading' && <Loader className="fixed bottom-5 right-5 p-2 w-10 h-10 rounded-full text-black bg-white" />}
       {allData.map(item => (
         <section key={item.title} className="flex flex-col items-center gap-4">
           <h1 className="font-serif text-4xl font-bold">{item.title}</h1>

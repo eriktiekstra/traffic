@@ -4,9 +4,8 @@ import {
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration,
+  ScrollRestoration
 } from "@remix-run/react";
-
 import styles from "./tailwind.css";
 
 export function links() {
